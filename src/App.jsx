@@ -1,34 +1,64 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { useState, useEffect } from 'react'
 import './App.css'
+import CoinInfo from './components/CoinInfo'
+const API_KEY = import.meta.env.VITE_APP_API_KEY
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [list, setList] = useState(null)
+  useEffect(()=>{
+    const fetchAllCoinData = async() => {
+      const request = await fetch('https://min-api.cryptocompare.com/data/all/coinlist?api_key=' + API_KEY)
+      const jsonResponse = await request.json()
+      setList(jsonResponse)
+    }
+    fetchAllCoinData().catch(console.error)
+  }, [])
+
+
+  // Searchbar feature
+  const [filteredResults, setFilteredResults] = useState([]);
+  const [searchInput, setSearchInput] = useState("");
+
+  const searchItems = searchValue => {
+    setSearchInput(searchValue);
+    if (searchValue !== "") {
+    const filteredData = Object.entries(list.Data).filter(([coin, coinData]) => 
+      coin.toLowerCase().includes(searchValue.toLowerCase()) ||
+      coinData.FullName.toLowerCase().includes(searchValue.toLowerCase())
+    )
+      setFilteredResults(filteredData);
+    } else {
+      setFilteredResults(Object.entries(list.Data));
+    }
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <div className='whole-page'>
+      <h1>My Crypto List</h1>
+      <input type="text" placeholder='Search...' onChange={(inputString)=> searchItems(inputString.target.value) }/>
+        <ul>
+          {searchInput.length > 0 ? 
+          filteredResults.map(([coin, coinData]) => {
+            return coinData.PlatformType==='blockchain' ?
+            <CoinInfo
+              key={coinData.Symbol}
+              image={coinData.ImageUrl}
+              name={coinData.FullName}
+              symbol={coinData.Symbol}
+            /> : null
+          })
+          : list && Object.entries(list.Data).map(([coin, coinData])=>{
+            return coinData.PlatformType === "blockchain" ?
+            <CoinInfo
+              key={coinData.Symbol}
+              image={coinData.ImageUrl}
+              name={coinData.FullName}
+              symbol={coinData.Symbol}
+            /> : 
+            null
+          })}
+        </ul>
+    </div>
   )
 }
 
